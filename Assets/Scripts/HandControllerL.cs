@@ -23,6 +23,14 @@
         [Tooltip("손가락이 최대로 굽혀질 각도")]
         public float maxFingerAngle = 90.0f;
 
+
+        [Header("데이터 외부 공개")]
+        [Tooltip("DataManager가 현재 손의 회전값을 가져가기 위한 변수")]
+        public Quaternion currentRotation;
+
+        [Tooltip("DataManager가 현재 손가락 굽힘 값을 가져가기 위한 변수 (0~1)")]
+        public float[] fingerValues = new float[5];
+
         // --- 내부 변수들 ---
     private SerialPort serialPort;
         private Thread dataReadThread;
@@ -130,6 +138,7 @@
                 float finalWristZ = -69.727f + roll; 
 
                 handRoot.localRotation = Quaternion.Euler(finalWristX, finalWristY, finalWristZ);
+                currentRotation = handRoot.localRotation;
             }
 
             // --- 손가락 회전 ---
@@ -140,6 +149,8 @@
                 {
                     // flexMin과 flexMax는 유니티 인스펙터에서 각 손가락에 맞게 입력해야 합니다.
                     float bendAmount = Mathf.InverseLerp(flexMin[i], flexMax[i], flexVals[i]); // 0 (펴짐) ~ 1 (최대 굽힘)
+                    fingerValues[i] = bendAmount;
+                    
                     float targetAngle = bendAmount * maxFingerAngle; // 최대 굽힘 각도까지 선형 보간
 
                     Quaternion initialRotation = Quaternion.identity; // 기본 회전값 초기화

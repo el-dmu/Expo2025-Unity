@@ -597,14 +597,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbc78f761b4a70548ba4d346a961f5ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  thumb: 0
-  indexf: 0
-  middle: 0
-  ring: 0
-  little: 0
-  gx: 0
-  gy: 0
-  gz: 0
+  serverUrl: http://192.168.1.101:8001/api/sensor/ingest/
+  apiKey: 051ca48ea0b2cb23b1047bffbfbb390248cc52701492e86aaa968a00a2b4c925
+  leftHandController: {fileID: 0}
+  rightHandController: {fileID: 0}
+  sendInterval: 0.1
 --- !u!4 &1539023655
 Transform:
   m_ObjectHideFlags: 0
@@ -761,6 +758,13 @@ MonoBehaviour:
   flexMin: 8b0200007702000026020000db0200007a020000
   flexMax: fa020000500300000a0300004a03000067030000
   maxFingerAngle: 90
+  currentRotation: {x: 0, y: 0, z: 0, w: 0}
+  fingerValues:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
 --- !u!114 &1578166435
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -807,6 +811,13 @@ MonoBehaviour:
   flexMin: a90200004503000046030000b002000061020000
   flexMax: 25030000de030000dd030000b503000041030000
   maxFingerAngle: 90
+  currentRotation: {x: 0, y: 0, z: 0, w: 0}
+  fingerValues:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
 --- !u!4 &1890948372 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 351318530399474915, guid: 4e437735acb8f5e4a89f936ff50e0e79, type: 3}

@@ -23,6 +23,15 @@ public class HandControllerR : MonoBehaviour
     [Tooltip("손가락이 최대로 굽혀질 각도")]
     public float maxFingerAngle = 90.0f;
 
+
+    [Header("데이터 외부 공개")]
+    [Tooltip("DataManager가 현재 손의 회전값을 가져가기 위한 변수")]
+    public Quaternion currentRotation;
+
+    [Tooltip("DataManager가 현재 손가락 굽힘 값을 가져가기 위한 변수 (0~1)")]
+    public float[] fingerValues = new float[5];
+
+
     // --- 내부 변수들 ---
     private SerialPort serialPort;
     private Thread dataReadThread;
@@ -129,6 +138,7 @@ public class HandControllerR : MonoBehaviour
             float finalWristZ = 69.727f + roll; 
 
             handRoot.localRotation = Quaternion.Euler(finalWristX, finalWristY, finalWristZ);
+            currentRotation = handRoot.localRotation;
         }
 
         for (int i = 0; i < fingerJoints.Length; i++)
@@ -136,6 +146,7 @@ public class HandControllerR : MonoBehaviour
             if (fingerJoints[i] != null && i < flexMin.Length && i < flexMax.Length)
             {
                 float bendAmount = Mathf.InverseLerp(flexMin[i], flexMax[i], flexVals[i]);
+                fingerValues[i] = bendAmount;
                 float targetAngle = bendAmount * maxFingerAngle;
 
                 Quaternion initialRotation = Quaternion.identity;
