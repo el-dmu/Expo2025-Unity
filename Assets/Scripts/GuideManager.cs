@@ -2,36 +2,45 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 
-// [System.Serializable]을 추가해야 Inspector 창에 노출됩니다.
 [System.Serializable]
 public class GuideStyle
 {
     [TextArea(4, 10)]
-    public string text; // 텍스트 내용
-    public Vector2 panelSize; // 패널의 크기 (Width, Height)
-    public float fontSize; // 텍스트의 폰트 크기
-    public float displayTime = 5.0f; // ★ 이 문장만 보여질 시간 (초)
+    public string text;
+    public Vector2 panelSize;
+    public float fontSize;
+    public float displayTime = 5.0f;
 }
 
 public class GuideManager : MonoBehaviour
 {
-    // Unity 에디터에서 연결할 UI 요소들
+    // --- UI 요소 ---
     public TextMeshProUGUI textMesh;
     public CanvasGroup canvasGroup;
-    public RectTransform panelRectTransform; // 패널의 RectTransform을 연결
+    public RectTransform panelRectTransform;
 
-    // 설정값
+    // ★ 고정 안내문 관련 UI 요소들
+    [Header("다음 단계 안내문")]
+    public GameObject fixedGuideObject;
+    public CanvasGroup fixedGuideCanvasGroup; // ★ 고정 안내문의 CanvasGroup
+
+    // --- 시간 설정 ---
     [Header("시간 설정")]
     public float fadeTime = 1.0f;
     public float delayBetweenTexts = 1.5f;
 
-    // 표시할 안내 문구와 스타일 목록
+    // --- 안내 문구 및 스타일 ---
     [Header("안내 문구 및 스타일")]
     public GuideStyle[] guideStyles;
 
 
     void Start()
     {
+        // 시작할 때 고정 안내문이 꺼져있는지 확인
+        if (fixedGuideObject != null)
+        {
+            fixedGuideObject.SetActive(false);
+        }
         StartCoroutine(StartGuide());
     }
 
@@ -40,41 +49,44 @@ public class GuideManager : MonoBehaviour
         canvasGroup.alpha = 0;
         yield return new WaitForSeconds(2f);
 
-        // 모든 스타일을 순서대로 적용
         foreach (GuideStyle style in guideStyles)
         {
-            // 1. 현재 스타일에 맞게 UI 속성 변경
+            // 스타일 적용
             textMesh.text = style.text;
             panelRectTransform.sizeDelta = style.panelSize;
             textMesh.fontSize = style.fontSize;
 
-            // 2. 안내문 Fade In
-            yield return StartCoroutine(FadeCanvasGroup(1f, fadeTime));
-            
-            // 3. ★ 각 스타일에 지정된 시간 동안 대기
+            // 페이드 인/아웃
+            yield return StartCoroutine(FadeCanvasGroup(canvasGroup, 1f, fadeTime));
             yield return new WaitForSeconds(style.displayTime);
-            
-            // 4. 안내문 Fade Out
-            yield return StartCoroutine(FadeCanvasGroup(0f, fadeTime));
-            
-            // 5. 다음 문장 전 대기
+            yield return StartCoroutine(FadeCanvasGroup(canvasGroup, 0f, fadeTime));
             yield return new WaitForSeconds(delayBetweenTexts);
         }
-        
-        gameObject.SetActive(false);
+
+        // 모든 순차 안내가 끝나면
+        // 1. 현재 안내 패널을 비활성화
+        // gameObject.SetActive(false);
+
+        // 2. ★ 다음 고정 안내 패널을 페이드인으로 활성화
+        if (fixedGuideObject != null && fixedGuideCanvasGroup != null)
+        {
+            fixedGuideCanvasGroup.alpha = 0; // 시작은 투명하게
+            fixedGuideObject.SetActive(true); // 오브젝트를 켠 다음
+            yield return StartCoroutine(FadeCanvasGroup(fixedGuideCanvasGroup, 1f, fadeTime)); // 페이드인 실행
+        }
     }
 
-    IEnumerator FadeCanvasGroup(float targetAlpha, float duration)
+    // ★ 어떤 CanvasGroup이든 페이드 효과를 줄 수 있도록 수정
+    IEnumerator FadeCanvasGroup(CanvasGroup cg, float targetAlpha, float duration)
     {
-        float startAlpha = canvasGroup.alpha;
+        float startAlpha = cg.alpha;
         float time = 0;
-
         while (time < duration)
         {
-            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, time / duration);
+            cg.alpha = Mathf.Lerp(startAlpha, targetAlpha, time / duration);
             time += Time.deltaTime;
             yield return null;
         }
-        canvasGroup.alpha = targetAlpha;
+        cg.alpha = targetAlpha;
     }
 }
