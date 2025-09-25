@@ -42,6 +42,9 @@ public class HandControllerR : MonoBehaviour
     private int[] flexVals = new int[5];
     private float pitch = 0, roll = 0, yaw = 0;
 
+    public bool buttonPressed = false; // 버튼을 눌렀는지 여부
+    public bool isGripping = false; // 주먹을 쥐었는지 여부
+
     void Start()
     {
         try
@@ -116,10 +119,31 @@ public class HandControllerR : MonoBehaviour
                         flexVals[i] = int.Parse(parts[i]);
                     }
                 }
-                
+
                 pitch = float.Parse(parts[5]);
                 roll = float.Parse(parts[6]);
                 yaw = float.Parse(parts[7]);
+
+                if (parts[11] == "1")
+                {
+                    buttonPressed = true;
+                }
+                else
+                {
+                    buttonPressed = false;
+                }
+
+                if (flexVals[0] > 2950 && flexVals[1] > 3750 &&
+                    flexVals[2] > 3850 && flexVals[3] > 3700 &&
+                    flexVals[4] > 150)
+                {
+                    isGripping = true;
+                }
+                else
+                {
+                    isGripping = false;
+                }
+                // Debug.Log($"주먹을 쥐었나요?: {isGripping}\n flex1: {flexVals[0] > 2980}, flex2: {flexVals[1] > 3870}, flex3: {flexVals[2] > 3930}, flex4: {flexVals[3] > 3770}, flex5: {flexVals[4] > 150}");
             }
         }
         catch (Exception e)

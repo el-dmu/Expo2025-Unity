@@ -31,6 +31,8 @@
         [Tooltip("DataManager가 현재 손가락 굽힘 값을 가져가기 위한 변수 (0~1)")]
         public float[] fingerValues = new float[5];
 
+        public bool isGripping = false; // 주먹을 쥐었는지 여부
+
         // --- 내부 변수들 ---
     private SerialPort serialPort;
         private Thread dataReadThread;
@@ -115,10 +117,23 @@
                             flexVals[i] = int.Parse(parts[i]);
                         }
                     }
-                    
+
                     pitch = float.Parse(parts[5]);
                     roll = float.Parse(parts[6]);
                     yaw = float.Parse(parts[7]);
+                    
+                    if (flexVals[0] > 2900 && flexVals[1] > 3300 &&
+                    flexVals[2] > 3000 && flexVals[3] > 3200 &&
+                    flexVals[4] > 3500)
+                    {
+                        isGripping = true;
+                    }
+                    else
+                    {
+                        isGripping = false;
+                    }
+                    // Debug.Log($"주먹을 쥐었나요?: {isGripping}\n flex1: {flexVals[0] > 2980}, flex2: {flexVals[1] > 3870}, flex3: {flexVals[2] > 3930}, flex4: {flexVals[3] > 3770}, flex5: {flexVals[4] > 150}");
+
                 }
             }
             catch (Exception e)
