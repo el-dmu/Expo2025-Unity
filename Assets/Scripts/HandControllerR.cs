@@ -44,9 +44,23 @@ public class HandControllerR : MonoBehaviour
 
     public bool buttonPressed = false; // 버튼을 눌렀는지 여부
     public bool isGripping = false; // 주먹을 쥐었는지 여부
+    private bool _isInDebugMode = false; // ★ 내부용 디버그 상태 변수 추가
+
+    // ★★★ 외부에서 호출할 함수 추가 ★★★
+    public void ActivateDebugMode()
+    {
+        _isInDebugMode = true;
+        Debug.Log($"[오른손] 디버그 모드가 활성화되어 포트 연결을 건너뜁니다.");
+    }
 
     void Start()
-    {
+    {   
+         if (_isInDebugMode)
+        {
+            isRunning = false;
+            return;
+        }
+        
         try
         {
             serialPort = new SerialPort(portName, 115200) { ReadTimeout = 200 };
@@ -155,15 +169,22 @@ public class HandControllerR : MonoBehaviour
     private void UpdateHandModel()
     {
         if (handRoot != null)
-        {
-            // 오른손 모델에 맞게 손목의 기본 회전값을 변경했습니다.
-            float finalWristX = 57.645f - pitch;
-            float finalWristY = -135.26f - yaw;
-            float finalWristZ = 69.727f + roll; 
+            {
+                
+                // float finalWristX = 57.645f - pitch;
+                // float finalWristY = 135.26f - yaw;
+                // float finalWristZ = -69.727f + roll; 
 
-            handRoot.localRotation = Quaternion.Euler(finalWristX, finalWristY, finalWristZ);
-            currentRotation = handRoot.localRotation;
-        }
+                Quaternion baseRotation = Quaternion.Euler(57.645f, -135.26f, 69.727f);
+
+                // 2. 센서 값으로 실시간 회전값을 만듭니다. (축 순서나 부호는 모델에 맞게 조절해야 할 수 있습니다)
+                //Quaternion sensorRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, -yaw * Mathf.Rad2Deg, roll * Mathf.Rad2Deg);
+                Quaternion sensorRotation = Quaternion.Euler(-pitch, -yaw, roll);
+
+                // 3. 초기 회전값에 센서 회전값을 곱해서 최종 회전값을 계산합니다.
+                handRoot.localRotation = baseRotation * sensorRotation;
+                currentRotation = handRoot.localRotation;
+            }
 
         for (int i = 0; i < fingerJoints.Length; i++)
         {

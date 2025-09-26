@@ -1493,6 +1493,37 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 1.16
   m_Center: {x: -0.42, y: -1.6156, z: 0.27}
+--- !u!1 &228489902
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 228489903}
+  m_Layer: 0
+  m_Name: HoseGrabTarget
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &228489903
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 228489902}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.6892433, y: 0.6967178, z: -0.011702158, w: -0.1984719}
+  m_LocalPosition: {x: 0.1145, y: -0.0337, z: -0.0478}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1117843426}
+  m_LocalEulerAnglesHint: {x: -14.909, y: -162.369, z: -272.943}
 --- !u!1 &335163111
 GameObject:
   m_ObjectHideFlags: 0
@@ -1594,7 +1625,7 @@ Transform:
   m_GameObject: {fileID: 475625988}
   serializedVersion: 2
   m_LocalRotation: {x: -0.19433962, y: 0.13005377, z: -0.9722697, w: 0.0031228773}
-  m_LocalPosition: {x: -0.001801, y: 0.000817, z: -0.001226}
+  m_LocalPosition: {x: 0.07, y: 0.2004, z: 0.0452}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2759,11 +2790,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8829451551789304537, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.245
+      value: 1.29
       objectReference: {fileID: 0}
     - target: {fileID: 8829451551789304537, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.24
+      value: 0.428
       objectReference: {fileID: 0}
     - target: {fileID: 8829451551789304537, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2800,7 +2831,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8829451551789304542, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1537055685}
+    - targetCorrespondingSourceObject: {fileID: 8829451551789304542, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1537055684}
   m_SourcePrefab: {fileID: 100100000, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
 --- !u!198 &932167084 stripped
 ParticleSystem:
@@ -2933,6 +2970,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3213915878472698099, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3213915878472698099, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
@@ -3004,6 +3045,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 9181273629020654173, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
+      propertyPath: CollisionModule.collisionMessages
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -3016,6 +3061,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7738676433288988581, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
       insertIndex: -1
       addedObject: {fileID: 475625989}
+    - targetCorrespondingSourceObject: {fileID: 7738676433288988581, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 228489903}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 194769707963898343, guid: 58d5295c7e9ea493cad3f82207b2be25, type: 3}
       insertIndex: -1
@@ -3143,6 +3191,8 @@ MonoBehaviour:
   lever: {fileID: 1995685656}
   sprayVFX: {fileID: 932167084}
   fireVFX: {fileID: 1537055679}
+  pinGrabTarget: {fileID: 475625989}
+  hoseGrabTarget: {fileID: 228489903}
   handMoveSpeed: 2
   pinPullSpeed: 1
   isDebugMode: 1
@@ -3415,6 +3465,43 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 8829451551789304542, guid: 8206b722d11501a449d6a278cca2adfa, type: 3}
   m_PrefabInstance: {fileID: 928645624}
   m_PrefabAsset: {fileID: 0}
+--- !u!136 &1537055684
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1537055679}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1
+  m_Height: 1.42
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.5, z: 0}
+--- !u!114 &1537055685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1537055679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0c3d868fc75bfa4c9b3d2f86c0ef484, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  timeToExtinguish: 5
+  sprayGracePeriod: 0.2
 --- !u!1 &1539023653
 GameObject:
   m_ObjectHideFlags: 0
@@ -3602,7 +3689,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 188555e3ec04127419e82a246f400835, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  portName: COM9
+  portName: COM3
   handRoot: {fileID: 96800871}
   fingerJoints:
   - {fileID: 96800866}
@@ -3656,7 +3743,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ce95f86585192840baa0e79f9c48879, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  portName: COM3
+  portName: COM9
   handRoot: {fileID: 1890948377}
   fingerJoints:
   - {fileID: 1890948372}

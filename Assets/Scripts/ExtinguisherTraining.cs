@@ -23,6 +23,8 @@ public class ExtinguisherTraining : MonoBehaviour
     public Transform lever; // 레버 오브젝트
     public ParticleSystem sprayVFX; // 분사 파티클 이펙트
     public GameObject fireVFX; // 꺼야 할 불 이펙트
+    public Transform pinGrabTarget;  // 왼손이 안전핀을 잡으러 갈 위치
+    public Transform hoseGrabTarget; // 왼손이 호스를 잡으러 갈 위치
 
     private Vector3 holdingPositionOffset = new Vector3(0.002556f, 0.000843f, 0.002155f);
     private Vector3 holdingRotationOffset = new Vector3(49.231f, -188.648f, -70.264f);
@@ -40,6 +42,18 @@ public class ExtinguisherTraining : MonoBehaviour
     private TrainingState currentState = TrainingState.Idle;
     private Quaternion initialLeverRotation;
     private Vector3 initialPinPosition;
+    private bool isReadyToGrabHose = false; // ★ 안전핀을 뽑은 후 손을 폈는지 확인하는 플래그
+
+    void Awake()
+    {
+        // 만약 TrainingManager의 디버그 모드가 켜져 있다면
+        if (isDebugMode)
+        {
+            // 양손 컨트롤러에게도 디버그 모드를 활성화하라고 명령
+            if (leftHand != null) leftHand.ActivateDebugMode();
+            if (rightHand != null) rightHand.ActivateDebugMode();
+        }
+    }
 
     void Start()
     {
@@ -78,7 +92,7 @@ public class ExtinguisherTraining : MonoBehaviour
                     currentState = TrainingState.ExtinguisherHeld;
 
                     // 4. 왼손을 안전핀 쪽으로 서서히 이동 시작
-                    StartCoroutine(MoveObjectSmoothly(leftHand.transform, pin.position, handMoveSpeed));
+                    StartCoroutine(MoveObjectSmoothly(leftHand.transform, pinGrabTarget.position, pinGrabTarget.rotation, handMoveSpeed));
                 }
                 break;
 
@@ -88,13 +102,20 @@ public class ExtinguisherTraining : MonoBehaviour
                 {
                     Debug.Log("안전핀을 뽑았습니다. 다음 단계로 이동합니다.");
                     currentState = TrainingState.PinPulled;
+                    isReadyToGrabHose = false; // ★ 호스를 잡을 준비가 안되었다고 초기화
                     StartCoroutine(PullPinAndMoveToHose());
                 }
                 break;
 
             case TrainingState.PinPulled:
                 // 5. 왼손이 주먹을 쥐면 호스를 잡음
-                if (leftHand.isGripping)
+                if (!leftHand.isGripping)
+                {
+                    isReadyToGrabHose = true;
+                }
+
+                // 2. 준비가 된 상태에서 다시 주먹을 쥐었을 때만 호스를 잡음
+                if (isReadyToGrabHose && leftHand.isGripping)
                 {
                     Debug.Log("호스를 잡았습니다. 다음 단계로 이동합니다.");
                     currentState = TrainingState.HoseHeld;
@@ -103,7 +124,8 @@ public class ExtinguisherTraining : MonoBehaviour
 
             case TrainingState.HoseHeld:
                 // 5. 호스 방향을 왼손 손목 회전값에 따라 조절
-                hose.rotation = leftHand.currentRotation;
+                //hose.rotation = leftHand.currentRotation;
+                hose.rotation = Quaternion.Euler(74.3f, 50f, -30.453f);
 
                 // 6. 오른손 버튼을 누르면 분사 (안전핀이 뽑혔을 때만)
                 if (rightHand.buttonPressed)
@@ -117,7 +139,8 @@ public class ExtinguisherTraining : MonoBehaviour
 
             case TrainingState.Spraying:
                 // 호스 방향 조절은 계속
-                hose.rotation = leftHand.currentRotation;
+                //hose.rotation = leftHand.currentRotation;
+                hose.rotation = Quaternion.Euler(74.3f, 50f, -30.453f);
 
                 // 오른손 버튼을 떼면 분사 중지
                 if (!rightHand.buttonPressed)
@@ -132,20 +155,25 @@ public class ExtinguisherTraining : MonoBehaviour
     }
 
     // 오브젝트를 목표 위치로 부드럽게 이동시키는 코루틴
-    IEnumerator MoveObjectSmoothly(Transform obj, Vector3 targetPosition, float speed)
+    IEnumerator MoveObjectSmoothly(Transform obj, Vector3 targetPosition, Quaternion targetRotation, float speed)
     {
-        while (Vector3.Distance(obj.position, targetPosition) > 0.01f)
+
+        while (Vector3.Distance(obj.position, targetPosition) > 0.01f || Quaternion.Angle(obj.rotation, targetRotation) > 1.0f)
         {
+            // 위치와 회전을 부드럽게 보간(Lerp/Slerp)
             obj.position = Vector3.Lerp(obj.position, targetPosition, speed * Time.deltaTime);
-            yield return null;
+            obj.rotation = Quaternion.Slerp(obj.rotation, targetRotation, speed * Time.deltaTime);
+            yield return null;  
         }
-        obj.position = targetPosition; // 정확한 위치로 보정
+        // 정확한 위치와 회전으로 보정
+        obj.position = targetPosition;
+        obj.rotation = targetRotation;
     }
 
     // 핀을 뽑고 손을 호스로 이동시키는 코루틴
     IEnumerator PullPinAndMoveToHose()
     {
-        Vector3 pinPullTarget = pin.position + pin.right * -0.2f; // 핀을 왼쪽으로 20cm 빼냄
+        Vector3 pinPullTarget = pin.position + pin.right * 0.2f; // 핀을 왼쪽으로 20cm 빼냄
 
         // 핀이 서서히 빠지는 모션
         while (Vector3.Distance(pin.position, pinPullTarget) > 0.01f)
@@ -156,7 +184,7 @@ public class ExtinguisherTraining : MonoBehaviour
         pin.gameObject.SetActive(false); // 핀 비활성화
 
         // 5. 핀이 다 빠지면 왼손을 호스 쪽으로 이동
-        StartCoroutine(MoveObjectSmoothly(leftHand.transform, hose.position, handMoveSpeed));
+        StartCoroutine(MoveObjectSmoothly(leftHand.transform, hoseGrabTarget.position, hoseGrabTarget.rotation, handMoveSpeed));
     }
     
     // ★★★ 디버그용 키보드 입력을 처리하는 함수 ★★★
@@ -173,7 +201,7 @@ public class ExtinguisherTraining : MonoBehaviour
             extinguisher.localRotation = Quaternion.Euler(holdingRotationOffset);
             Debug.Log(" [디버그] 소화기를 잡았습니다.");
             currentState = TrainingState.ExtinguisherHeld;
-            StartCoroutine(MoveObjectSmoothly(leftHand.transform, pin.position, handMoveSpeed));
+            StartCoroutine(MoveObjectSmoothly(leftHand.transform, pinGrabTarget.position, pinGrabTarget.rotation, handMoveSpeed));
         }
 
         // 숫자 키 2: 안전핀 뽑기
