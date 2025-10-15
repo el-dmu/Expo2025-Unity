@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.ultraleap.dependencytoolkit": {
+      "version": "1.0.0-pre.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
     "com.ultraleap.tracking": {
       "version": "7.2.0",
       "depth": 0,

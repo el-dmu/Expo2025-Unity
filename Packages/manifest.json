@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.ultraleap.dependencytoolkit": "1.0.0-pre.2",
     "com.ultraleap.tracking": "7.2.0",
     "com.unity.collab-proxy": "2.8.2",
     "com.unity.feature.development": "1.0.1",
