@@ -16,9 +16,18 @@ public class SensorFrame
     public float qw2, qx2, qy2, qz2;
 }
 
-// 최종적으로 보낼 JSON 전체 구조
+// 1. 정답용 데이터 JSON 구조
 [System.Serializable]
-public class FinalPayload
+public class ReferencePayload
+{
+    public string motionName;
+    public string scoreCategory = "reference";
+    public List<SensorFrame> sensorData = new List<SensorFrame>();
+}
+
+// 2. 사용자 동작 데이터 JSON 구조
+[System.Serializable]
+public class UserPayload
 {
     public string motionName;
     public string empNo;
@@ -28,21 +37,24 @@ public class FinalPayload
 public class DataManager : MonoBehaviour
 {
     [Header("서버 설정")]
-    public string serverUrl = "http://127.0.0.1:8000/api/your-endpoint/";
+    [Tooltip("사용자 동작 평가(evaluate)를 위한 API Endpoint")]
+    public string evaluateUrl = "http://127.0.0.1:8000/api/ai/evaluate/";
+    [Tooltip("정답 데이터 기록(record)을 위한 API Endpoint")]
+    public string recordUrl = "http://127.0.0.1:8000/api/ai/recordings/";
 
     [Header("데이터 소스")]
     public ReceiveHandDataL leftHand;
     public ReceiveHandDataR rightHand;
     
-    [Header("수집 설정")]
+    [Header("수집 및 저장 설정")]
     [Tooltip("데이터를 수집하는 시간 간격 (초)")]
     public float collectionInterval = 0.1f;
-
-    [Header("저장 설정")]
     [Tooltip("체크하면 서버로 보내는 대신 로컬 파일로 저장합니다.")]
     public bool saveToFileInsteadOfServer = false;
     [Tooltip("JSON 파일을 저장할 폴더 이름 (Assets 폴더 내에 생성됩니다)")]
     public string saveFolderName = "SensorDataOutput";
+    [Tooltip("체크하면 '정답용 데이터'를 기록합니다 (scoreCategory: reference)")]
+    public bool isRecordingReferenceData = false;
 
     private List<SensorFrame> collectedFrames = new List<SensorFrame>();
     private Coroutine collectionCoroutine;
@@ -76,24 +88,48 @@ public class DataManager : MonoBehaviour
         }
         Debug.Log($">>> 데이터 수집 중지! 총 {collectedFrames.Count} 프레임 수집됨.");
         
-        FinalPayload finalPayload = new FinalPayload
+        if (isRecordingReferenceData)
         {
-            motionName = motionName,
-            empNo = employeeNumber,
-            sensorData = collectedFrames
-        };
+            // --- 정답용 데이터 처리 ---
+            ReferencePayload payload = new ReferencePayload
+            {
+                motionName = motionName,
+                sensorData = collectedFrames
+            };
+            string jsonData = JsonUtility.ToJson(payload, true);
+            Debug.Log("--- 정답용 데이터(Reference) ---");
+            Debug.Log(jsonData);
 
-        string jsonData = JsonUtility.ToJson(finalPayload, true);
-        Debug.Log(jsonData);
-        
-        // ★★★ 분기 처리: 체크박스 상태에 따라 저장 또는 전송 ★★★
-        if (saveToFileInsteadOfServer)
-        {
-            SaveDataToFile(jsonData, motionName, employeeNumber);
+            if (saveToFileInsteadOfServer)
+            {
+                SaveDataToFile(jsonData, motionName, null, true);
+            }
+            else
+            {
+                StartCoroutine(SendDataToServer(recordUrl, jsonData));
+            }
         }
         else
         {
-            StartCoroutine(SendDataToServer(jsonData));
+            // --- 사용자 동작 데이터 처리 ---
+            UserPayload payload = new UserPayload
+            {
+                motionName = motionName,
+                empNo = employeeNumber,
+                sensorData = collectedFrames
+            };
+            string jsonData = JsonUtility.ToJson(payload, true);
+            Debug.Log("--- 사용자 데이터(User) ---");
+            Debug.Log(jsonData);
+
+            if (saveToFileInsteadOfServer)
+            {
+                SaveDataToFile(jsonData, motionName, employeeNumber, false);
+            }
+            else
+            {
+                StartCoroutine(SendDataToServer(evaluateUrl, jsonData));
+            }
         }
     }
 
@@ -134,16 +170,16 @@ public class DataManager : MonoBehaviour
     }
 
     // JSON 데이터를 서버로 보내는 코루틴
-    private IEnumerator SendDataToServer(string jsonData)
+    private IEnumerator SendDataToServer(string url, string jsonData)
     {
-        using (UnityWebRequest request = new UnityWebRequest(serverUrl, "POST"))
+        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
             byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
 
-            Debug.Log("서버로 데이터를 전송합니다...");
+            Debug.Log($"서버({url})로 데이터를 전송합니다...");
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
@@ -158,7 +194,7 @@ public class DataManager : MonoBehaviour
     }
 
     // ★★★ JSON 데이터를 파일로 저장하는 함수 ★★★
-    private void SaveDataToFile(string jsonData, string motionName, string empNo)
+    private void SaveDataToFile(string jsonData, string motionName, string empNo, bool isReference)
     {
         try
         {
@@ -171,7 +207,17 @@ public class DataManager : MonoBehaviour
 
             // 2. 고유한 파일 이름 생성 (동작이름_사번_타임스탬프.json)
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string fileName = $"{motionName}_{empNo}_{timestamp}.json";
+            string fileName;
+            
+            if (isReference)
+            {
+                fileName = $"REFERENCE_{motionName}_{timestamp}.json";
+            }
+            else
+            {
+                fileName = $"USER_{empNo}_{motionName}_{timestamp}.json";
+            }
+            
             string fullPath = Path.Combine(directoryPath, fileName);
 
             // 3. 파일로 저장

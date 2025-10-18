@@ -22,11 +22,14 @@ public class TrainingManager : MonoBehaviour
     public Transform extinguisherSpawnPoint;
     public FireExtinguisherController extinguisherController; 
 
-    [Header("3. 디버그 모드 (Debug Mode)")]
+    [Header("3. 데이터 기록 연결")]
+    public DataManager dataManager;
+
+    [Header("4. 디버그 모드 (Debug Mode)")]
     public bool debugMode = false;
     public Transform debugStartWaypoint;
     public Transform debugExtinguisherSpawnPoint;
-    [Header("4. 안내 문구 설정")]
+    [Header("5. 안내 문구 설정")]
     public List<TaskInstruction> taskInstructions;
 
     private bool hasPathStarted = false;
@@ -34,8 +37,9 @@ public class TrainingManager : MonoBehaviour
     private bool isWaitingForNarration = false;
     private bool isFireMissionActive = false;
     private bool isInstructionPlaying = false;
-    private string currentInstructionTaskName = ""; 
-    private bool isWaitingForFireMissionIntro = false; 
+    private string currentInstructionTaskName = "";
+    private bool isWaitingForFireMissionIntro = false;
+    private bool isRecordingData = false;
 
     private List<string> fireMissionTasks = new List<string> { "소화기 잡기", "안전핀 뽑기", "호스 잡기", "레버 눌러 분사" };
     private Dictionary<string, bool> taskCompletionStatus = new Dictionary<string, bool>();
@@ -110,6 +114,13 @@ public class TrainingManager : MonoBehaviour
 
     private void HandleExtinguisherGrabbed()
     {
+        if (isFireMissionActive && !isRecordingData && dataManager != null)
+        {
+            isRecordingData = true;
+            dataManager.StartRecording();
+            Debug.Log("<color=blue>[TrainingManager] 소화기 잡기 감지. 센서 데이터 기록을 시작합니다.</color>");
+        }
+
         if (isInstructionPlaying || isWaitingForNarration) return; 
 
         if (isFireMissionActive)
@@ -450,6 +461,27 @@ public class TrainingManager : MonoBehaviour
     private void HandleAllFiresExtinguished()
     {
         isFireMissionActive = false;
+
+        if (isRecordingData && dataManager != null)
+        {
+            isRecordingData = false;
+            string motionName = "fire_extinguisher_lift"; // 동작 이름 지정
+
+            // SessionManager에서 사번 가져오기
+            string empNo = "UNKNOWN";
+            if (SessionManager.Instance != null)
+            {
+                empNo = SessionManager.Instance.employeeID;
+            }
+            else
+            {
+                Debug.LogWarning("SessionManager를 찾을 수 없습니다. 기본 사번 'UNKNOWN'을 사용합니다.");
+            }
+
+            dataManager.StopRecordingAndSend(motionName, empNo);
+            Debug.Log("<color=blue>[TrainingManager] 모든 화재 진압. 센서 데이터 기록을 중지하고 전송합니다.</color>");
+        }
+
         if (uiManager != null)
         {
             uiManager.HideChecklist();
