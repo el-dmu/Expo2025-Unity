@@ -1,108 +1,223 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
-using System.Collections;
 
+[System.Serializable]
+public class MessageStep
+{
+    [TextArea(3, 5)] public string message;
+    public string nextPromptText = "왼쪽으로 스와이프하여 다음으로...";
+    public AudioClip narrationClip;
+}
+
+[RequireComponent(typeof(AudioSource))]
 public class UIManager : MonoBehaviour
 {
     [Header("UI 연결")]
-    [Tooltip("안내 문구가 표시될 TextMeshPro UI 오브젝트")]
+    public TextMeshProUGUI mainText;
+    public TextMeshProUGUI nextPromptTextUI;
+    [Header("체크리스트 UI")]
+    public GameObject checklistPanel;
+    public TextMeshProUGUI checklistText;
+
+    [Header("안내 문구 UI")]
+    public GameObject instructionPanel;
     public TextMeshProUGUI instructionText;
-    [Tooltip("하단에 고정된 '다음' 안내 텍스트 게임 오브젝트")]
-    public GameObject nextPromptObject;
+    [Tooltip("오디오 클립이 없을 때, 안내 문구를 최소 이 시간(초)만큼 표시합니다.")]
+    public float minInstructionTime = 2.0f; // [추가]
 
-    [Header("메시지 내용")]
-    [Tooltip("표시할 안내 문장들을 순서대로 입력하세요.")]
-    [TextArea(3, 10)]
-    public string[] messages;
-
-    [Header("타이핑 효과 설정")]
-    [Tooltip("한 글자가 표시되는 시간 (초)")]
-    public float typingSpeed = 0.05f;
-
+    [Header("초기 안내 메시지")]
+    public MessageStep[] initialMessages;
+    [Header("이벤트")]
     public UnityEvent OnInstructionFinished;
+    public UnityEvent OnNarrationFinished;
+    public UnityEvent OnSingleInstructionFinished;
 
-    private int _currentMessageIndex = 0;
-    private Coroutine _typingCoroutine;
-    private bool _isTyping = false;
+    private AudioSource audioSource;
+    private Coroutine typingCoroutine;
+    private Dictionary<string, bool> checklistItems = new Dictionary<string, bool>();
+    private int currentIndex = -1;
+    private bool isInitialSequenceFinished = false;
+    private int initialFireCount;
+    private int extinguishedCount;
+    private float currentPercentage;
 
-    // [추가] 이중 입력을 막기 위한 플래그 변수
-    private bool _inputCooldown = false;
+    void Awake() => audioSource = GetComponent<AudioSource>();
 
     void Start()
     {
-        if (instructionText == null)
+        if (checklistPanel != null) checklistPanel.SetActive(false);
+        if (instructionPanel != null) instructionPanel.SetActive(false);
+
+        if (isInitialSequenceFinished) return;
+        if (initialMessages == null || initialMessages.Length == 0)
         {
-            Debug.LogError("Instruction Text가 할당되지 않았습니다!");
+            CompleteInitialSequence();
             return;
         }
-
-        if(nextPromptObject != null)
-        {
-            nextPromptObject.SetActive(true);
-        }
-
-        instructionText.gameObject.SetActive(true);
-        StartTyping(messages[_currentMessageIndex]);
+        ShowNextInitialMessage();
     }
 
-    public void OnNextPressed()
+    public void ShowInstruction(string text, AudioClip clip)
     {
-        // [수정] 쿨다운 중이라면 함수를 즉시 종료시켜 이중 입력을 방지
-        if (_inputCooldown)
+        if (instructionPanel == null || instructionText == null)
         {
+            Debug.LogError("[UIManager] Instruction Panel 또는 Text가 연결되지 않았습니다! Inspector 창을 확인해주세요.", this.gameObject);
             return;
         }
+        Debug.Log($"<color=cyan>[UIManager] '{text}' 안내 문구 표시 요청 받음.</color>");
+        instructionText.text = text;
+        instructionPanel.SetActive(true);
 
-        Debug.Log("OnNextPressed 함수가 " + this.gameObject.name + "에 의해 호출됨!");
+        if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+        typingCoroutine = StartCoroutine(InstructionSequence(clip));
+    }
 
-        if (_isTyping)
+    // [수정] 오디오 클립(clip)이 null일 경우, minInstructionTime 만큼 강제로 대기
+    private IEnumerator InstructionSequence(AudioClip clip)
+    {
+        audioSource.Stop();
+
+        bool hasAudio = (clip != null);
+
+        if (hasAudio)
         {
-            StopCoroutine(_typingCoroutine);
-            instructionText.text = messages[_currentMessageIndex];
-            _isTyping = false;
+            audioSource.PlayOneShot(clip);
+            while (audioSource.isPlaying) yield return null;
         }
         else
         {
-            _currentMessageIndex++;
-
-            if (_currentMessageIndex < messages.Length)
-            {
-                StartTyping(messages[_currentMessageIndex]);
-            }
-            else
-            {
-                instructionText.gameObject.SetActive(false);
-                if (nextPromptObject != null)
-                {
-                    nextPromptObject.SetActive(false);
-                }
-                Debug.Log("모든 안내가 종료되었습니다.");
-                OnInstructionFinished.Invoke();
-            }
+            Debug.LogWarning($"[UIManager] Instruction 오디오 클립이 없습니다. {minInstructionTime}초 대기합니다.");
+            yield return new WaitForSeconds(minInstructionTime);
         }
+
+        instructionPanel.SetActive(false);
+        typingCoroutine = null;
+        Debug.Log("<color=cyan>[UIManager] 단일 안내(TTS) 종료. 이벤트 호출.</color>");
+        OnSingleInstructionFinished.Invoke();
     }
 
-    private void StartTyping(string message)
+    public void ShowChecklist(Dictionary<string, bool> tasks, int totalFires)
     {
-        _typingCoroutine = StartCoroutine(TypeText(message));
-    }
-
-    private IEnumerator TypeText(string message)
-    {
-        // [수정] 코루틴이 시작될 때 쿨다운을 활성화하고 끝날 때 비활성화
-        _inputCooldown = true;
-        _isTyping = true;
-        instructionText.text = "";
-        foreach (char letter in message.ToCharArray())
+        if (checklistPanel == null || checklistText == null)
         {
-            instructionText.text += letter;
-            yield return new WaitForSeconds(typingSpeed);
+            Debug.LogError("[UIManager] Checklist Panel 또는 Text가 연결되지 않았습니다! Inspector 창을 확인해주세요.", this.gameObject);
+            return;
         }
-        _isTyping = false;
-        
-        // 0.1초 후에 쿨다운을 풀어 다음 입력을 받을 수 있게 함
-        yield return new WaitForSeconds(0.1f);
-        _inputCooldown = false;
+        Debug.Log("<color=cyan>[UIManager] 체크리스트 표시 요청 받음.</color>");
+        initialFireCount = totalFires;
+        checklistItems = new Dictionary<string, bool>(tasks);
+
+        checklistPanel.SetActive(true);
+        UpdateChecklistDisplay();
+    }
+
+    // [수정] 인트로 메시지(ShowMessage)도 오디오 클립이 null일 때 대기
+    IEnumerator TypeText(MessageStep step)
+    {
+        if (nextPromptTextUI != null) nextPromptTextUI.gameObject.SetActive(false);
+        audioSource.Stop();
+
+        mainText.text = step.message;
+
+        bool hasAudio = (step.narrationClip != null);
+
+        if (hasAudio)
+        {
+            audioSource.PlayOneShot(step.narrationClip);
+            while (audioSource.isPlaying) yield return null;
+        }
+        else
+        {
+            Debug.LogWarning($"[UIManager] Message 오디오 클립이 없습니다. 2초 대기합니다.");
+            yield return new WaitForSeconds(2.0f);
+        }
+
+        if (nextPromptTextUI != null && !string.IsNullOrEmpty(step.nextPromptText))
+        {
+            nextPromptTextUI.text = step.nextPromptText;
+            nextPromptTextUI.gameObject.SetActive(true);
+        }
+        typingCoroutine = null;
+        OnNarrationFinished.Invoke();
+    }
+
+    // --- 이하 변경 없음 ---
+    public void HandleSwipeInput()
+    {
+        if (!isInitialSequenceFinished && typingCoroutine == null) ShowNextInitialMessage();
+    }
+    private void ShowNextInitialMessage()
+    {
+        if (isInitialSequenceFinished) return;
+        currentIndex++;
+        if (currentIndex < initialMessages.Length)
+        {
+            if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+            typingCoroutine = StartCoroutine(TypeText(initialMessages[currentIndex]));
+        }
+        else
+        {
+            CompleteInitialSequence();
+        }
+    }
+    public void CompleteInitialSequence()
+    {
+        if (isInitialSequenceFinished) return;
+        isInitialSequenceFinished = true;
+        if (mainText != null) mainText.gameObject.SetActive(false);
+        if (nextPromptTextUI != null) nextPromptTextUI.gameObject.SetActive(false);
+        OnInstructionFinished.Invoke();
+    }
+    public void ShowMessage(string message, AudioClip clip, string prompt)
+    {
+        if (mainText == null) return;
+        mainText.gameObject.SetActive(true);
+        MessageStep step = new MessageStep { message = message, narrationClip = clip, nextPromptText = prompt };
+        if (typingCoroutine != null) StopCoroutine(typingCoroutine);
+        typingCoroutine = StartCoroutine(TypeText(step));
+    }
+    public void HideMessage()
+    {
+        if (mainText != null) mainText.gameObject.SetActive(false);
+        if (nextPromptTextUI != null) nextPromptTextUI.gameObject.SetActive(false);
+    }
+    public void HideChecklist()
+    {
+        if (checklistPanel != null) checklistPanel.SetActive(false);
+    }
+    public void UpdateChecklistItem(string task, bool isCompleted)
+    {
+        if (checklistItems.ContainsKey(task))
+        {
+            checklistItems[task] = isCompleted;
+            UpdateChecklistDisplay();
+        }
+    }
+    public void UpdateFireCount(int remaining, int initial)
+    {
+        initialFireCount = initial;
+        extinguishedCount = initial - remaining;
+        UpdateChecklistDisplay();
+    }
+    public void UpdateFirePercentage(float percentage)
+    {
+        currentPercentage = percentage;
+        UpdateChecklistDisplay();
+    }
+    private void UpdateChecklistDisplay()
+    {
+        string newText = "";
+        foreach (var item in checklistItems)
+        {
+            string statusIcon = item.Value ? "<color=green>V</color>" : "O";
+            newText += $"{statusIcon} {item.Key}\n";
+        }
+        newText += "\n──────────\n";
+        newText += $"화재 진압 ({extinguishedCount}/{initialFireCount})\n";
+        newText += $"화재 진압률 : {currentPercentage:F0}%";
+        checklistText.text = newText;
     }
 }

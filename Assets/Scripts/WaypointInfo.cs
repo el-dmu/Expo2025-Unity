@@ -1,10 +1,18 @@
 using UnityEngine;
+using UnityEngine.Events;
 
-/// <summary>
-/// 개별 웨이포인트에 대한 추가 정보를 담는 컴포넌트입니다.
-/// </summary>
 public class WaypointInfo : MonoBehaviour
 {
-    [Tooltip("플레이어가 이 웨이포인트에 도착했을 때 멈추게 하려면 체크하세요.")]
-    public bool stopHere = false;
+    [Header("구역 유형 설정")]
+    [Tooltip("이 웨이포인트가 화재 진압 미션을 시작하는 곳이라면 체크하세요.")]
+    public bool isFirefightingZone = false;
+
+    [Header("도착 시 표시할 내용")]
+    [TextArea(3, 5)]
+    public string message = "메시지를 입력하세요.";
+    public AudioClip narrationClip;
+
+    [Header("이벤트")]
+    public UnityEvent<string> onArrive;
 }
+

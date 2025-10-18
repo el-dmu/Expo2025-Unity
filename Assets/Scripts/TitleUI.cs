@@ -19,6 +19,6 @@ public class TitleUI : MonoBehaviour
         }
 
         // 3. 메인 훈련 씬(FE_Scene_BG_added)을 로드
-        SceneManager.LoadScene("FE_Scene_BG_added");
+        SceneManager.LoadScene("LeapMotionScene");
     }
 }

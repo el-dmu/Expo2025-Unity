@@ -1,68 +1,187 @@
 using UnityEngine;
+using System.Collections;
+using Leap;
+using Leap.Unity;
+using System;
 
 public class FireExtinguisherController : MonoBehaviour
 {
+    // --- 이벤트 선언 ---
+    public static event Action OnGrabbed;
+    public static event Action OnPinPulled;
+    public static event Action OnHoseGrabbed;
+    public static event Action OnLeverSqueezed;
+
+    // --- Inspector 연결 변수 ---
+    [Header("잡기(Grab) 설정")]
+    public Transform rightHandPalm;
+    public Transform handleAnchor;
+    public string rightHandTag = "RightHand";
+    [Range(0.7f, 1.0f)]
+    public float grabThreshold = 0.9f;
+
     [Header("오브젝트 연결")]
     public ParticleSystem sprayParticles;
-    public InteractionTarget safetyPinTarget;
-    public InteractionTarget leverTarget;
+    public InteractionTargetSeal safetyPinTarget;
+    public Transform pin;
+    public Transform lever;
+    public InteractionTargetLever leverTarget;
+    public GrabbableHorn hoseTarget;
 
     [Header("분사 설정")]
-    [Tooltip("손을 떼도 분사가 유지되는 유예 시간 (초)")]
-    public float sprayGraceTime = 0.3f; // 0.3초의 유예 시간 설정
+    public float sprayGraceTime = 0.3f;
 
-    // 내부 상태 변수
+    // --- 내부 상태 변수 ---
+    private Rigidbody rb;
+    private bool isHeld = false;
     private bool isPinPulled = false;
-    private float releaseTimer = 0f; // 레버를 놓았을 때 카운트다운할 타이머
+    private bool isHoseGrabbed = false;
+    private bool leverSqueezedEventFired = false;
+    private float releaseTimer = 0f;
+    private Quaternion initialLeverRotation;
+    private bool isHandInside = false;
+    private Hand currentHand;
+    private bool wasGrabbingLastFrame = false;
+
+    // '물리적 잠금' 변수
+    private bool isGrabbingLocked = false;
+    private bool isPinPullLocked = false;
+    private bool isHoseGrabLocked = false;
+    private bool isLeverSqueezeLocked = false;
+
+    public bool IsHeld => isHeld;
+    public bool IsPinPulled => isPinPulled;
+    public bool IsHoseGrabbed => isHoseGrabbed;
+
+    // 각 행동을 잠그거나 해제할 함수들
+    public void LockGrabbing(bool lockState)
+    {
+        isGrabbingLocked = lockState;
+        Debug.Log($"<color={(lockState ? "red" : "green")}>[Controller] 잡기(Grab) 잠금: {lockState}</color>");
+    }
+    public void LockPinPull(bool lockState)
+    {
+        isPinPullLocked = lockState;
+        Debug.Log($"<color={(lockState ? "red" : "green")}>[Controller] 안전핀(Pin) 잠금: {lockState}</color>");
+    }
+
+    // [★★★ 핵심 수정 ★★★]
+    // 호스 잠금이 'isGrabbable' 상태를 직접 제어하도록 수정
+    public void LockHoseGrab(bool lockState)
+    {
+        isHoseGrabLocked = lockState;
+        if (hoseTarget != null)
+        {
+            // 잠금(true)이면 isGrabbable = false
+            // 해제(false)이면 isGrabbable = true
+            hoseTarget.isGrabbable = !lockState;
+        }
+        Debug.Log($"<color={(lockState ? "red" : "green")}>[Controller] 호스(Hose) 잠금: {lockState} (isGrabbable: {!lockState})</color>");
+    }
+    public void LockLeverSqueeze(bool lockState)
+    {
+        isLeverSqueezeLocked = lockState;
+        Debug.Log($"<color={(lockState ? "red" : "green")}>[Controller] 레버(Lever) 잠금: {lockState}</color>");
+    }
+
 
     void Start()
     {
-        if (sprayParticles != null)
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
         {
-            sprayParticles.Stop();
+            rb = gameObject.AddComponent<Rigidbody>();
+            rb.useGravity = false;
         }
+
+        if (sprayParticles != null) sprayParticles.Stop();
+
+        // [수정] Start에서 hoseTarget.isGrabbable = false로 명시적 설정
+        if (hoseTarget != null) hoseTarget.isGrabbable = false;
+
+        initialLeverRotation = lever.localRotation;
+        safetyPinTarget.enabled = false;
+        leverTarget.enabled = false;
     }
 
     void Update()
     {
-        HandleInteractions();
+        HandleGrabbing();
+
+        if (isHeld)
+        {
+            transform.position = rightHandPalm.position - (transform.rotation * handleAnchor.localPosition);
+            HandleInteractions();
+
+            // [수정] !isHoseGrabLocked 체크는 HandleInteractions로 이동할 필요 없이 여기서 계속 수행
+            if (isPinPulled && !isHoseGrabbed && !isHoseGrabLocked && hoseTarget != null && hoseTarget.isGrabbed)
+            {
+                isHoseGrabbed = true;
+                OnHoseGrabbed?.Invoke();
+                Debug.Log("호스를 잡았습니다!");
+            }
+        }
+    }
+
+    void HandleGrabbing()
+    {
+        if (isHeld || isGrabbingLocked) return;
+
+        if (!isHandInside)
+        {
+            wasGrabbingLastFrame = false;
+            return;
+        }
+        bool isGrabbingNow = currentHand != null && currentHand.GrabStrength >= grabThreshold;
+        if (isGrabbingNow && !wasGrabbingLastFrame)
+        {
+            Grab();
+        }
+        wasGrabbingLastFrame = isGrabbingNow;
+    }
+
+    private void Grab()
+    {
+        isHeld = true;
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        safetyPinTarget.enabled = true;
+        leverTarget.enabled = true;
+        Debug.Log("소화기를 잡았습니다!");
+        OnGrabbed?.Invoke();
     }
 
     void HandleInteractions()
     {
-        // 1. 안전핀 뽑기 로직 (변경 없음)
-        if (!isPinPulled && safetyPinTarget.IsGrabbed)
+        if (!isPinPulled && !isPinPullLocked && safetyPinTarget.IsGrabbed)
         {
             PullPin();
         }
 
-        // 2. 레버 누르기 및 분사 로직 (수정됨)
-        // 안전핀이 뽑힌 상태에서만 레버 로직을 처리
-        if (isPinPulled)
+        if (isPinPulled && isHoseGrabbed)
         {
-            // 조건: 레버를 '쥐고 있을' 때
-            if (leverTarget.IsGrabbed)
+            if (!isLeverSqueezeLocked && leverTarget.IsGrabbed)
             {
-                // 유예 시간 타이머를 최대로 계속 재설정
                 releaseTimer = sprayGraceTime;
             }
-            // 조건: 레버를 '쥐고 있지 않을' 때
             else
             {
-                // 타이머를 서서히 감소시킴
                 releaseTimer -= Time.deltaTime;
             }
         }
         else
         {
-            // 안전핀이 뽑히지 않았다면 타이머는 항상 0
             releaseTimer = 0f;
         }
 
-        // 최종적으로 타이머가 0보다 클 때만 분사 상태로 간주
         bool isLeverPressed = releaseTimer > 0;
-        
         ControlParticles(isLeverPressed);
+
+        if (isLeverPressed && !leverSqueezedEventFired)
+        {
+            leverSqueezedEventFired = true;
+            OnLeverSqueezed?.Invoke();
+        }
     }
 
     void ControlParticles(bool isActive)
@@ -71,6 +190,7 @@ public class FireExtinguisherController : MonoBehaviour
         {
             if (!sprayParticles.isPlaying)
             {
+                lever.localRotation = initialLeverRotation * Quaternion.Euler(20, 0, 0);
                 sprayParticles.Play();
             }
         }
@@ -78,6 +198,7 @@ public class FireExtinguisherController : MonoBehaviour
         {
             if (sprayParticles.isPlaying)
             {
+                lever.localRotation = initialLeverRotation;
                 sprayParticles.Stop();
             }
         }
@@ -85,12 +206,50 @@ public class FireExtinguisherController : MonoBehaviour
 
     void PullPin()
     {
+        if (isPinPulled) return;
         isPinPulled = true;
         Debug.Log("안전핀을 뽑았습니다.");
+        OnPinPulled?.Invoke();
+        StartCoroutine(PullPinAnimation());
+    }
 
-        if (safetyPinTarget != null)
+    // [★★★ 핵심 수정 ★★★]
+    // PullPinAnimation에서 hoseTarget.isGrabbable = true; 코드를 삭제
+    IEnumerator PullPinAnimation()
+    {
+        Vector3 pinPullTarget = pin.position + pin.right * 0.2f;
+        while (Vector3.Distance(pin.position, pinPullTarget) > 0.01f)
         {
-            safetyPinTarget.gameObject.SetActive(false);
+            pin.position = Vector3.Lerp(pin.position, pinPullTarget, 1f * Time.deltaTime);
+            yield return null;
+        }
+        pin.gameObject.SetActive(false);
+
+        // [삭제] if (hoseTarget != null)
+        // [삭제] {
+        // [삭제]     hoseTarget.isGrabbable = true;
+        // [삭제] }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag(rightHandTag))
+        {
+            HandModelBase handModel = other.GetComponentInParent<HandModelBase>();
+            if (handModel != null)
+            {
+                isHandInside = true;
+                currentHand = handModel.GetLeapHand();
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag(rightHandTag))
+        {
+            isHandInside = false;
+            currentHand = null;
         }
     }
 }
