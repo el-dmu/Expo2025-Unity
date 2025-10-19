@@ -144,7 +144,7 @@ public class UIManager : MonoBehaviour
         OnNarrationFinished.Invoke();
     }
 
-    // --- 이하 변경 없음 ---
+    // --- 이하 기존 함수들 (변경 없음) ---
     public void HandleSwipeInput()
     {
         if (!isInitialSequenceFinished && typingCoroutine == null) ShowNextInitialMessage();
@@ -219,5 +219,35 @@ public class UIManager : MonoBehaviour
         newText += $"화재 진압 ({extinguishedCount}/{initialFireCount})\n";
         newText += $"화재 진압률 : {currentPercentage:F0}%";
         checklistText.text = newText;
+    }
+
+    // [★★★ 이 함수 2개를 클래스 하단에 추가 ★★★]
+
+    /// <summary>
+    /// 메인 메시지 없이 하단 프롬프트만 표시합니다. (예: "아무 키나 누르세요")
+    /// </summary>
+    public void ShowReturnPrompt(string prompt)
+    {
+        if (mainText != null)
+        {
+            mainText.gameObject.SetActive(false); // 메인 텍스트는 숨김
+        }
+
+        if (nextPromptTextUI != null)
+        {
+            nextPromptTextUI.text = prompt;
+            nextPromptTextUI.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// 하단 프롬프트를 숨깁니다.
+    /// </summary>
+    public void HideReturnPrompt()
+    {
+        if (nextPromptTextUI != null)
+        {
+            nextPromptTextUI.gameObject.SetActive(false);
+        }
     }
 }

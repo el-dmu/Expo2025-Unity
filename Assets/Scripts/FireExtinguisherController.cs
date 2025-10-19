@@ -83,7 +83,31 @@ public class FireExtinguisherController : MonoBehaviour
         isLeverSqueezeLocked = lockState;
         Debug.Log($"<color={(lockState ? "red" : "green")}>[Controller] 레버(Lever) 잠금: {lockState}</color>");
     }
+    /// <summary>
+    /// 소화기를 강제로 손에서 놓습니다. (훈련 종료 시 사용)
+    /// </summary>
+    public void ForceRelease()
+    {
+        if (!isHeld) return; // 이미 놓은 상태면 무시
 
+        isHeld = false;
+
+        // Rigidbody를 다시 물리 오브젝트로 되돌립니다.
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true; // 중력 다시 적용
+        }
+
+        // 활성화된 인터랙션 타겟들을 비활성화합니다.
+        safetyPinTarget.enabled = false;
+        leverTarget.enabled = false;
+
+        // 파티클이 켜져있다면 강제로 끕니다.
+        ControlParticles(false);
+
+        Debug.Log("<color=orange>[Controller] 소화기를 강제로 놓았습니다.</color>");
+    }
 
     void Start()
     {

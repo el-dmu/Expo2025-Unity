@@ -9,8 +9,8 @@ EditorBuildSettings:
     path: Assets/Scenes/TitleScene.unity
     guid: a2e1ba7f5ee347c45ad4078478938448
   - enabled: 1
-    path: Assets/Scenes/LeapMotionScene.unity
-    guid: 9263054424e710345b34fb753685ce4e
+    path: Assets/Scenes/LeapMotionScene_edit.unity
+    guid: cadf7af35d76d4344acb932ebc38b4ff
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: eda15067fd40ecc48ba7c07225dffdfa, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 9f555925c36329446982b972c8d9b558, type: 2}
