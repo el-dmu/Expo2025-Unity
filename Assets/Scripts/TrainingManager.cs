@@ -530,7 +530,7 @@ public class TrainingManager : MonoBehaviour
         if (isRecordingData && dataManager != null)
         {
             isRecordingData = false;
-            string motionName = "fire_extinguisher_lift"; // 동작 이름 지정
+            string motionName = "소화기 사용 훈련"; // 동작 이름 지정
 
             // SessionManager에서 사번 가져오기
             string empNo = "UNKNOWN";

@@ -45,7 +45,7 @@ public class DataManager : MonoBehaviour
     [Header("데이터 소스")]
     public ReceiveHandDataL leftHand;
     public ReceiveHandDataR rightHand;
-    
+
     [Header("수집 및 저장 설정")]
     [Tooltip("데이터를 수집하는 시간 간격 (초)")]
     public float collectionInterval = 0.1f;
@@ -87,7 +87,7 @@ public class DataManager : MonoBehaviour
             StopCoroutine(collectionCoroutine);
         }
         Debug.Log($">>> 데이터 수집 중지! 총 {collectedFrames.Count} 프레임 수집됨.");
-        
+
         if (isRecordingReferenceData)
         {
             // --- 정답용 데이터 처리 ---
@@ -162,9 +162,9 @@ public class DataManager : MonoBehaviour
                 qy2 = rightHand.QuaterVals[2],
                 qz2 = rightHand.QuaterVals[3],
             };
-            
+
             collectedFrames.Add(currentFrame);
-            
+
             yield return new WaitForSeconds(collectionInterval);
         }
     }
@@ -208,7 +208,7 @@ public class DataManager : MonoBehaviour
             // 2. 고유한 파일 이름 생성 (동작이름_사번_타임스탬프.json)
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string fileName;
-            
+
             if (isReference)
             {
                 fileName = $"REFERENCE_{motionName}_{timestamp}.json";
@@ -217,7 +217,7 @@ public class DataManager : MonoBehaviour
             {
                 fileName = $"USER_{empNo}_{motionName}_{timestamp}.json";
             }
-            
+
             string fullPath = Path.Combine(directoryPath, fileName);
 
             // 3. 파일로 저장
