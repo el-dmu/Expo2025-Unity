@@ -235,6 +235,7 @@ public class FireExtinguisherController : MonoBehaviour
         Debug.Log("안전핀을 뽑았습니다.");
         OnPinPulled?.Invoke();
         StartCoroutine(PullPinAnimation());
+        LockHoseGrab(false);
     }
 
     // [★★★ 핵심 수정 ★★★]
