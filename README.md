@@ -389,6 +389,6 @@ GLIFE/
 
 | 레포지토리 | 담당 영역 | 링크 |
 |-----------|----------|------|
-| **GLIFE (Unity)** | VR 훈련 클라이언트 (현재 레포) | — |
+| **Expo2025-Unity** | VR 훈련 클라이언트 (현재 레포) | — |
 | **flex_glove** | 스마트 글러브 아두이노 펌웨어 (LOLIN D32 / ESP32) | [lyh030526/flex_glove](https://github.com/lyh030526/flex_glove) |
 | **Expo2025-Front-Back** | Django 백엔드 + React 웹 대시보드 | [yousung1020/Expo2025-Front-Back](https://github.com/yousung1020/Expo2025-Front-Back) |
